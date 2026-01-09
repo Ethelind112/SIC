@@ -16,10 +16,22 @@ MQTT_PORT = 1883
 MQTT_TOPIC = "devovation/streamlit"
 
 incoming_data = []
+is_connected = False
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code", rc)
-    client.subscribe(MQTT_TOPIC)
+    global is_connected
+    if rc == 0:
+        is_connected = True
+        print("Connected successfully")
+        client.subscribe(MQTT_TOPIC)
+    else:
+        is_connected = False
+        print(f"Connection failed with code {rc}")
+
+def on_disconnect(client, userdata, rc):
+    global is_connected
+    is_connected = False
+    print("Disconnected from MQTT Broker")
 
 def on_message(client, userdata, msg):
     global incoming_data, fall_detected_flag
@@ -53,9 +65,21 @@ threading.Thread(target=mqtt_thread_function, daemon=True).start()
 status_placeholder = st.empty()
 sensor_block = st.empty()
 condition = st.empty()
+connection_status_placeholder = st.empty()
 
 while True:
     time.sleep(2)
+
+    if is_connected:
+        connection_status_placeholder.markdown(
+            "● <span style='color:green; font-weight:bold;'>Connected to MQTT Broker</span>", 
+            unsafe_allow_html=True
+        )
+    else:
+        connection_status_placeholder.markdown(
+            "● <span style='color:red; font-weight:bold;'>Disconnected - Reconnecting...</span>", 
+            unsafe_allow_html=True
+        )
 
     if incoming_data:
         try:
@@ -94,5 +118,3 @@ while True:
         except Exception as e:
             status_placeholder.error(f"UI Update Error: {e}")
 
-time.sleep(2)
-st.rerun()
