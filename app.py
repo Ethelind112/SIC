@@ -10,7 +10,6 @@ from math import sqrt
 # === Streamlit App ===
 st.set_page_config(page_title="Fall Detection", layout="centered")
 st.title("📡 Fall Detection (ESP32 via MQTT)")
-st.write("Receiving real-time data on topic: `fall`")
 
 MQTT_BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
@@ -78,6 +77,14 @@ while True:
 
             with condition.container():
                 st.subheader("Keadaan Lansia")
+
+                if status.lower() == "Aman":
+                    st.error("⚠️ **Lansia Jatuh!** Segera Periksa!")
+                elif status.lower() == "Tidak Diketahui":
+                    st.warning("⚠️ **Keadaan Lansia Tidak Diketahui!** Segera Periksa!")
+                else:
+                    st.success("✅ **Lansia Baik-Baik Saja**")
+
                 st.info(f"**Status:** {status}")
 
                 st.markdown("---")
