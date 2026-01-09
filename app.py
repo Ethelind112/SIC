@@ -16,22 +16,19 @@ MQTT_PORT = 1883
 MQTT_TOPIC = "devovation/streamlit"
 
 incoming_data = []
-
-if "is_connected" not in st.session_state:
-    st.session_state.is_connected = False
+mqtt_connected = False
 
 def on_connect(client, userdata, flags, rc):
+    global mqtt_connected
     if rc == 0:
-        st.session_state.is_connected = True
-        print("Connected successfully")
+        mqtt_connected = True
         client.subscribe(MQTT_TOPIC)
     else:
-        st.session_state.is_connected = False
-        print(f"Connection failed with code {rc}")
+        mqtt_connected = False
 
 def on_disconnect(client, userdata, rc):
-    st.session_state.is_connected = False
-    print("Disconnected from MQTT Broker")
+    global mqtt_connected
+    mqtt_connected = False
 
 def on_message(client, userdata, msg):
     global incoming_data, fall_detected_flag
@@ -70,7 +67,7 @@ connection_status_placeholder = st.empty()
 while True:
     time.sleep(2)
 
-    if st.session_state.is_connected:
+    if mqtt_connected:
         connection_status_placeholder.info("✅ Connected to MQTT Broker")
     else:
         connection_status_placeholder.info("🔄 Attempting to connect to MQTT Broker...")
