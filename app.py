@@ -27,13 +27,14 @@ def on_message(client, userdata, msg):
     try:
         payload = json.loads(msg.payload.decode())
 
-        # === SENSOR BARU ===
         suhu = float(payload.get("Suhu", 0.0))
         hum = float(payload.get("Hum", 0.0))
         status = str(payload.get("Status", "Tidak Diketahui"))
 
         # === SIMPAN DATA KE LIST ===
         incoming_data.append([suhu, hum, status])
+
+        st.session_state["last_message_time"] = time.time()
 
     except Exception as e:
         print("Error:", e)
@@ -46,14 +47,28 @@ def mqtt_thread_function():
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_forever()
 
+if "last_message_time" not in st.session_state:
+    st.session_state.last_message_time = None
+
 threading.Thread(target=mqtt_thread_function, daemon=True).start()
 
 status_placeholder = st.empty()
 sensor_block = st.empty()
 condition = st.empty()
+TIMEOUT_SECONDS = 10
 
 while True:
     time.sleep(2)
+
+    now = time.time()
+
+    if st.session_state.last_message_time is None:
+        status_placeholder.warning("📭 Waiting for sensor data...")
+        continue
+
+    if now - st.session_state.last_message_time > TIMEOUT_SECONDS:
+        status_placeholder.error("❌ No data received from sensor!")
+        continue
 
     if incoming_data:
         try:
@@ -92,5 +107,5 @@ while True:
         except Exception as e:
             status_placeholder.error(f"UI Update Error: {e}")
 
-time.sleep(2)
-st.rerun()
+    time.sleep(2)
+    st.rerun()
