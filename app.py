@@ -94,5 +94,5 @@ while True:
         except Exception as e:
             status_placeholder.error(f"UI Update Error: {e}")
 
-    time.sleep(2)
-    st.rerun()
+time.sleep(2)
+st.rerun()
