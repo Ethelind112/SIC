@@ -31,21 +31,10 @@ def on_message(client, userdata, msg):
         # === SENSOR BARU ===
         suhu = float(payload.get("Suhu", 0.0))
         hum = float(payload.get("Hum", 0.0))
-        cahaya = str(payload.get("Cahaya", ""))
-        ldr = int(payload.get("LDR", 0))
-
-        # === FALL SENSOR ===
-        ax = float(payload.get("Ax", 0.0))
-        ay = float(payload.get("Ay", 0.0))
-        az = float(payload.get("Az", 0.0))
-        gx = float(payload.get("Gx", 0.0))
-        gy = float(payload.get("Gy", 0.0))
-        gz = float(payload.get("Gz", 0.0))
-
-        status = str(payload.get("Status", "Tidak diketahui"))
+        status = str(payload.get("Status", "Tidak Diketahui"))
 
         # === SIMPAN DATA KE LIST ===
-        incoming_data.append([suhu, hum, cahaya, ldr, ax, ay, az, gx, gy, gz])
+        incoming_data.append([suhu, hum, status])
 
     except Exception as e:
         print("Error:", e)
@@ -70,7 +59,7 @@ while True:
         try:
             # Ambil data terbaru (sekarang termasuk status)
             last = incoming_data[-1]
-            suhu, hum, cahaya, ldr, ax, ay, az, gx, gy, gz = last
+            suhu, hum, status = last
 
             # === SENSOR INFO ===
             with sensor_block.container():
@@ -80,13 +69,15 @@ while True:
 
                 with col1:
                     st.info(f"🌡 **Suhu:** {suhu} °C")
-                    st.info(f"💧 **Kelembaban:** {hum} %")
-                    st.info(f"💡 **Cahaya:** {cahaya}")
-                    st.info(f"🔦 **LDR:** {ldr}")
 
                 with col2:
-                    st.success(f"📈 **Ax / Ay / Az**\n{ax} / {ay} / {az}")
-                    st.success(f"🔄 **Gx / Gy / Gz**\n{gx} / {gy} / {gz}")
+                    st.info(f"💧 **Kelembaban:** {hum} %")
+
+                st.markdown("---")
+
+            with status.container():
+                st.subheader("Keadaan Lansia")
+                st.info(f"**Status:** {status}")
 
                 st.markdown("---")
 
