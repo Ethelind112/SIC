@@ -1,11 +1,7 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 import json
 import threading
-import time
 import paho.mqtt.client as mqtt
-from math import sqrt
 
 # === Streamlit App ===
 st.set_page_config(page_title="Fall Detection", layout="centered")
@@ -15,87 +11,90 @@ MQTT_BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
 MQTT_TOPIC = "devovation/streamlit"
 
-incoming_data = []
+# === Session State Init ===
+if "incoming_data" not in st.session_state:
+    st.session_state.incoming_data = []
 
+if "mqtt_connected" not in st.session_state:
+    st.session_state.mqtt_connected = False
+
+if "mqtt_started" not in st.session_state:
+    st.session_state.mqtt_started = False
+
+# === MQTT CALLBACKS ===
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code", rc)
-    client.subscribe(MQTT_TOPIC)
+    if rc == 0:
+        st.session_state.mqtt_connected = True
+        client.subscribe(MQTT_TOPIC)
+        print("MQTT Connected")
+    else:
+        print("MQTT Connection failed:", rc)
 
 def on_message(client, userdata, msg):
-    global incoming_data, fall_detected_flag
-
     try:
         payload = json.loads(msg.payload.decode())
 
-        # === SENSOR BARU ===
         suhu = float(payload.get("Suhu", 0.0))
         hum = float(payload.get("Hum", 0.0))
         status = str(payload.get("Status", "Tidak Diketahui"))
 
-        # === SIMPAN DATA KE LIST ===
-        incoming_data.append([suhu, hum, status])
+        st.session_state.incoming_data.append([suhu, hum, status])
+
+        # keep last 20 only
+        st.session_state.incoming_data = st.session_state.incoming_data[-20:]
 
     except Exception as e:
-        print("Error:", e)
+        print("MQTT Error:", e)
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message
-
+# === MQTT THREAD ===
 def mqtt_thread_function():
+    client = mqtt.Client(callback_api_version=2)
+    client.on_connect = on_connect
+    client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_forever()
 
-threading.Thread(target=mqtt_thread_function, daemon=True).start()
+# Start MQTT only once
+if not st.session_state.mqtt_started:
+    st.session_state.mqtt_started = True
+    threading.Thread(target=mqtt_thread_function, daemon=True).start()
 
+# === UI PLACEHOLDERS ===
 status_placeholder = st.empty()
 sensor_block = st.empty()
 condition = st.empty()
 
-while True:
-    time.sleep(2)
+data = st.session_state.incoming_data
 
-    if incoming_data:
-        try:
-            # Ambil data terbaru (sekarang termasuk status)
-            last = incoming_data[-1]
-            suhu, hum, status = last
+# === UI UPDATE ===
+if data:
+    suhu, hum, status = data[-1]
 
-            # === SENSOR INFO ===
-            with sensor_block.container():
-                st.subheader("📊 Sensor Real-Time Data")
+    with sensor_block.container():
+        st.subheader("📊 Keadaan Ruangan")
 
-                col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-                with col1:
-                    st.info(f"🌡 **Suhu:** {suhu} °C")
+        with col1:
+            st.info(f"🌡 **Suhu:** {suhu} °C")
 
-                with col2:
-                    st.info(f"💧 **Kelembaban:** {hum} %")
+        with col2:
+            st.info(f"💧 **Kelembaban:** {hum} %")
 
-                st.markdown("---")
+    with condition.container():
+        st.subheader("Keadaan Lansia")
 
-            with condition.container():
-                st.subheader("Keadaan Lansia")
+        if status.lower() == "jatuh":
+            st.error("⚠️ **Lansia Jatuh!** Segera Periksa!")
+        elif status.lower() == "tidak diketahui":
+            st.warning("⚠️ **Keadaan Lansia Tidak Diketahui!** Segera Periksa!")
+        else:
+            st.success("✅ **Lansia Baik-Baik Saja**")
 
-                if status.lower() == "jatuh":
-                    st.error("⚠️ **Lansia Jatuh!** Segera Periksa!")
-                elif status.lower() == "tidak diketahui":
-                    st.warning("⚠️ **Keadaan Lansia Tidak Diketahui!** Segera Periksa!")
-                else:
-                    st.success("✅ **Lansia Baik-Baik Saja**")
+elif st.session_state.mqtt_connected:
+    # MQTT connected but no data yet
+    status_placeholder.warning("📡 MQTT Connected. Waiting for data...")
 
-                st.info(f"**Status:** {status}")
-
-                st.markdown("---")
-
-            incoming_data = incoming_data[-20:]
-
-        except Exception as e:
-            status_placeholder.error(f"UI Update Error: {e}")
-
-    else:
-        status_placeholder.info("⏳ Waiting for data from MQTT...")
-
-time.sleep(2)
-st.rerun()
+else:
+    # Not connected yet
+    status_placeholder.info("⏳ Connecting to MQTT broker...")
