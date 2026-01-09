@@ -51,6 +51,7 @@ threading.Thread(target=mqtt_thread_function, daemon=True).start()
 
 status_placeholder = st.empty()
 sensor_block = st.empty()
+condition = st.empty()
 
 while True:
     time.sleep(2)
@@ -75,7 +76,7 @@ while True:
 
                 st.markdown("---")
 
-            with status.container():
+            with condition.container():
                 st.subheader("Keadaan Lansia")
                 st.info(f"**Status:** {status}")
 
