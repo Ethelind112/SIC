@@ -9,7 +9,7 @@ from math import sqrt
 
 # === Streamlit App ===
 st.set_page_config(page_title="Fall Detection", layout="centered")
-st.title("📡 Fall Detection (ESP32 via MQTT)")
+st.title("📡 Fall Detection")
 
 MQTT_BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
