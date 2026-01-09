@@ -71,9 +71,9 @@ while True:
     time.sleep(2)
 
     if st.session_state.is_connected:
-        st.info("✅ Connected to MQTT Broker")
+        connection_status_placeholder.info("✅ Connected to MQTT Broker")
     else:
-        st.info("🔄 Attempting to connect to MQTT Broker...")
+        connection_status_placeholder.info("🔄 Attempting to connect to MQTT Broker...")
 
     if incoming_data:
         try:
