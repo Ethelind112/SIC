@@ -14,7 +14,7 @@ st.write("Receiving real-time data on topic: `fall`")
 
 MQTT_BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
-MQTT_TOPIC = "devovation/data"
+MQTT_TOPIC = "devovation/streamlit"
 
 incoming_data = []
 
