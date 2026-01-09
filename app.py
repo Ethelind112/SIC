@@ -70,7 +70,7 @@ while True:
         try:
             # Ambil data terbaru (sekarang termasuk status)
             last = incoming_data[-1]
-            status, suhu, hum, cahaya, ldr, ax, ay, az, gx, gy, gz = last
+            suhu, hum, cahaya, ldr, ax, ay, az, gx, gy, gz = last
 
             # === SENSOR INFO ===
             with sensor_block.container():
