@@ -78,9 +78,9 @@ while True:
             with condition.container():
                 st.subheader("Keadaan Lansia")
 
-                if status.lower() == "Aman":
+                if status.lower() == "jatuh":
                     st.error("⚠️ **Lansia Jatuh!** Segera Periksa!")
-                elif status.lower() == "Tidak Diketahui":
+                elif status.lower() == "tidak diketahui":
                     st.warning("⚠️ **Keadaan Lansia Tidak Diketahui!** Segera Periksa!")
                 else:
                     st.success("✅ **Lansia Baik-Baik Saja**")
