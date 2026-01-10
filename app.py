@@ -14,7 +14,7 @@ MQTT_TOPIC_Pergerakan = "devovation/pergerakan"
 MQTT_TOPIC_Permintaan = "devovation/permintaan"
 
 latest_values = {
-    "Suhu": 0.0, "Hum": 0.0, "Status": "Tidak Diketahui", "Permintaan": "Tidak ada",
+    "Suhu": 0.0, "Hum": 0.0, "Status": "Tidak Diketahui", "Permintaan": "Tidak ada", "Last_Update_Permintaan": "None",
     "Ax": 0.0, "Ay": 0.0, "Az": 0.0, "Gx": 0.0, "Gy": 0.0, "Gz": 0.0
 }
 
@@ -54,6 +54,7 @@ def on_message(client, userdata, msg):
 
         elif msg.topic == MQTT_TOPIC_Permintaan:
             latest_values["Permintaan"] = payload.get("Permintaan", latest_values["Permintaan"])
+            latest_values["Last_Update_Permintaan"] = payload.get("Time", latest_values["Last_Update_Permintaan"])
     except Exception as e:
         print(f"Error parsing {msg.topic}: {e}")
 
@@ -101,8 +102,8 @@ while True:
             st.markdown(
                 f"""
                 <div style="
-                    background-color: #EA7B7B;
-                    color: white;
+                    background-color: #FFCDC9;
+                    color: #5A0E24;
                     border-radius: 10px;
                     padding: 20px;
                     margin-bottom: 20px;
@@ -121,8 +122,8 @@ while True:
             st.markdown(
                 f"""
                 <div style="
-                    background-color: #FAD691;
-                    color: #FA5C5C;
+                    background-color: #FFFDE1;
+                    color: #CC561E;
                     border-radius: 10px;
                     padding: 20px;
                     margin-bottom: 20px;
@@ -141,7 +142,7 @@ while True:
             st.markdown(
                 f"""
                 <div style="
-                    background-color: #C5D89D;
+                    background-color: #EBF4DD;
                     color: #1B211A;
                     border-radius: 10px;
                     padding: 20px;
@@ -221,8 +222,9 @@ while True:
                     display: flex;
                     flex-direction: column;
             ">
-                <p style="margin: 0;">Permintaan Bantuan dari Lansia:</p>
-                <p style="margin: 0;"><strong>{d['Permintaan']}</strong></p>
+                <p style="margin: 0; font-size: 15px;">Permintaan Bantuan dari Lansia:</p>
+                <p style="margin: 0; padding-bottom: 5px;color: #57595B; font-size: 12px;">Last Update: {d['Last_Update_Permintaan']}</p>
+                <p style="margin: 0;" font-size: 15px;><strong>{d['Permintaan']}</strong></p>
             </div>
             """,
             unsafe_allow_html=True
