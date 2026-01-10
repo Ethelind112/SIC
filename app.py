@@ -105,6 +105,20 @@ while True:
                 st.markdown("---")
 
             incoming_data = incoming_data[-20:]
+            st.markdown(
+                """
+                <style>
+                .custom-container {
+                    background-color: #f9f9f9;
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border-left: 6px solid #4CAF50;
+                    margin-bottom: 1rem;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
 
         except Exception as e:
             status_placeholder.error(f"UI Update Error: {e}")
