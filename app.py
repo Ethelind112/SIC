@@ -42,7 +42,6 @@ def on_message(client, userdata, msg):
         if msg.topic == MQTT_TOPIC_Ruangan:
             latest_values["Suhu"] = float(payload.get("Suhu", latest_values["Suhu"]))
             latest_values["Hum"] = float(payload.get("Hum", latest_values["Hum"]))
-            latest_values["Status"] = payload.get("Status", latest_values["Status"])
             
         elif msg.topic == MQTT_TOPIC_Pergerakan:
             latest_values["Ax"] = float(payload.get("Ax", latest_values["Ax"]))
@@ -51,6 +50,7 @@ def on_message(client, userdata, msg):
             latest_values["Gx"] = float(payload.get("Gx", latest_values["Gx"]))
             latest_values["Gy"] = float(payload.get("Gy", latest_values["Gy"]))
             latest_values["Gz"] = float(payload.get("Gz", latest_values["Gz"]))
+            latest_values["Status"] = payload.get("Status", latest_values["Status"])
 
         elif msg.topic == MQTT_TOPIC_Permintaan:
             latest_values["Permintaan"] = payload.get("Permintaan", latest_values["Permintaan"])
@@ -118,27 +118,7 @@ while True:
                 """,
                 unsafe_allow_html=True
             )
-        elif status.lower() == "tidak diketahui":
-            st.markdown(
-                f"""
-                <div style="
-                    background-color: #FFFDE1;
-                    color: #CC561E;
-                    border-radius: 10px;
-                    padding: 20px;
-                    margin-bottom: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    text-align: center;
-                ">
-                    <h5 style="margin: 0;">⚠️ <strong>Keadaan Lansia Tidak Diketahui!</strong> Segera Periksa!</h5>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
+        elif status.lower() == "aman":
             st.markdown(
                 f"""
                 <div style="
@@ -154,6 +134,26 @@ while True:
                     text-align: center;
                 ">
                     <h5 style="margin: 0;">✅ <strong>Lansia Baik-Baik Saja</strong></h5>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                f"""
+                <div style="
+                    background-color: #FFFDE1;
+                    color: #CC561E;
+                    border-radius: 10px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    text-align: center;
+                ">
+                    <h5 style="margin: 0;">⚠️ <strong>Keadaan Lansia Tidak Diketahui!</strong> Segera Periksa!</h5>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -203,7 +203,7 @@ while True:
                     align-items: center;
                     text-align: center;
                 ">
-                    <p style="margin: 0;">Suhu Ruangan</p>
+                    <p style="margin: 0;">Kelembapan Ruangan</p>
                     <h4 style="margin: 0;">       {d['Hum']} %</h4>
                 </div>
                 """,
