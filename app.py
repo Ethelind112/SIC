@@ -6,6 +6,22 @@ import threading
 import time
 import paho.mqtt.client as mqtt
 from math import sqrt
+import joblib
+
+@st.cache_resource
+def load_ml_model():
+    try:
+        # Pastikan nama file sama dengan yang kamu download dari Colab
+        model = joblib.load('model_jatuh.pkl')
+        return model
+    except Exception as e:
+        return None
+
+rf_model = load_ml_model()
+
+if rf_model is None:
+    st.error("⚠️ File 'model_jatuh.pkl' tidak ditemukan! Pastikan file berada di folder yang sama dengan app.py")
+    st.stop()
 
 MQTT_BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
@@ -14,11 +30,13 @@ MQTT_TOPIC_Pergerakan = "devovation/pergerakan"
 MQTT_TOPIC_Permintaan = "devovation/permintaan"
 
 latest_values = {
-    "Suhu": 0.0, "Hum": 0.0, "Status": "Tidak Diketahui", "Permintaan": "Tidak ada", "Last_Update_Permintaan": "None",
+    "Suhu": 0.0, "Hum": 0.0, "Permintaan": "Tidak ada", "Last_Update_Permintaan": "None",
     "Ax": 0.0, "Ay": 0.0, "Az": 0.0, "Gx": 0.0, "Gy": 0.0, "Gz": 0.0
 }
 
 mqtt_connected = False
+fall_detected_flag = False
+current_confidence = 0.0
 
 def on_connect(client, userdata, flags, rc):
     global mqtt_connected
@@ -34,7 +52,8 @@ def on_disconnect(client, userdata, rc):
     mqtt_connected = False
 
 def on_message(client, userdata, msg):
-    global latest_values
+    global latest_values, fall_detected_flag
+
     try:
         payload = json.loads(msg.payload.decode())
         
@@ -50,7 +69,22 @@ def on_message(client, userdata, msg):
             latest_values["Gx"] = float(payload.get("Gx", latest_values["Gx"]))
             latest_values["Gy"] = float(payload.get("Gy", latest_values["Gy"]))
             latest_values["Gz"] = float(payload.get("Gz", latest_values["Gz"]))
-            latest_values["Status"] = payload.get("Status", latest_values["Status"])
+
+            acc_magnitude = np.sqrt((latest_values['Ax']**2 + latest_values['Ay']**2 + latest_values['Az']**2))
+            gyro_magnitude = np.sqrt((latest_values['Gx']**2 + latest_values['Gy']**2 + latest_values['Gz']**2))
+
+            input_data = pd.DataFrame([[latest_values['Ax'], latest_values['Ay'], latest_values['Az'], latest_values['Gx'], latest_values['Gy'], latest_values['Gz'], acc_magnitude, gyro_magnitude]], columns=['ax', 'ay', 'az', 'gx', 'gy', 'gz', 'acc_magnitude', 'gyro_magnitude'])
+        
+            prediction = rf_model.predict(input_data)[0]
+            proba = rf_model.predict_proba(input_data)[0]
+
+            if prediction == 1:
+                fall_detected_flag = True
+                current_confidence = proba[1] * 100
+                print(f"🚨 JATUH TERDETEKSI! (Confidence: {current_confidence:.1f}%)")
+            else:
+                fall_detected_flag = False
+                current_confidence = proba[0] * 100
 
         elif msg.topic == MQTT_TOPIC_Permintaan:
             latest_values["Permintaan"] = payload.get("Permintaan", latest_values["Permintaan"])
@@ -60,7 +94,7 @@ def on_message(client, userdata, msg):
 
 # === Streamlit App ===
 st.set_page_config(page_title="Fall Detection", layout="centered")
-st.title("Dashboard Sistem Lansia")
+st.title("Dashboard Monitoring Lansia")
 
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame(columns=["Time", "Suhu", "Kelembaban"])
@@ -97,8 +131,7 @@ while True:
     d = latest_values.copy()
 
     with condition.container():
-        status = str(d["Status"]).lower()
-        if status.lower() == "jatuh":
+        if fall_detected_flag:
             st.markdown(
                 f"""
                 <div style="
@@ -118,7 +151,7 @@ while True:
                 """,
                 unsafe_allow_html=True
             )
-        elif status.lower() == "aman":
+        else:
             st.markdown(
                 f"""
                 <div style="
@@ -134,26 +167,6 @@ while True:
                     text-align: center;
                 ">
                     <h5 style="margin: 0;">✅ <strong>Lansia Baik-Baik Saja</strong></h5>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                f"""
-                <div style="
-                    background-color: #FFFDE1;
-                    color: #CC561E;
-                    border-radius: 10px;
-                    padding: 20px;
-                    margin-bottom: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    text-align: center;
-                ">
-                    <h5 style="margin: 0;">⚠️ <strong>Keadaan Lansia Tidak Diketahui!</strong> Segera Periksa!</h5>
                 </div>
                 """,
                 unsafe_allow_html=True
