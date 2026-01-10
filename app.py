@@ -8,6 +8,7 @@ import paho.mqtt.client as mqtt
 from math import sqrt
 import joblib
 
+# Load ML
 @st.cache_resource
 def load_ml_model():
     try:
@@ -23,6 +24,7 @@ if rf_model is None:
     st.error("⚠️ File 'model_jatuh.pkl' tidak ditemukan! Pastikan file berada di folder yang sama dengan app.py")
     st.stop()
 
+# MQTT Setup
 MQTT_BROKER = "broker.emqx.io"
 MQTT_PORT = 1883
 MQTT_TOPIC_Ruangan = "devovation/ruangan"
@@ -92,13 +94,6 @@ def on_message(client, userdata, msg):
     except Exception as e:
         print(f"Error parsing {msg.topic}: {e}")
 
-# === Streamlit App ===
-st.set_page_config(page_title="Fall Detection", layout="centered")
-st.title("Dashboard Monitoring Lansia")
-
-if "data" not in st.session_state:
-    st.session_state.data = pd.DataFrame(columns=["Time", "Suhu", "Kelembaban"])
-
 @st.cache_resource
 def start_mqtt():
     client = mqtt.Client()
@@ -110,6 +105,13 @@ def start_mqtt():
     return client
 
 client_instance = start_mqtt()
+
+# === Streamlit App ===
+st.set_page_config(page_title="Fall Detection", layout="centered")
+st.title("Dashboard Monitoring Lansia")
+
+if "data" not in st.session_state:
+    st.session_state.data = pd.DataFrame(columns=["Time", "Suhu", "Kelembaban"])
 
 status_placeholder = st.empty()
 connection_status_placeholder = st.empty()
