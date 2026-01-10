@@ -38,6 +38,7 @@ latest_values = {
 
 mqtt_connected = False
 fall_detected_flag = False
+onFall_flag = False
 current_confidence = 0.0
 
 def on_connect(client, userdata, flags, rc):
@@ -82,6 +83,7 @@ def on_message(client, userdata, msg):
 
             if prediction == 1:
                 fall_detected_flag = True
+                onFall_flag = True
                 current_confidence = proba[1] * 100
                 print(f"🚨 JATUH TERDETEKSI! (Confidence: {current_confidence:.1f}%)")
             else:
@@ -94,17 +96,18 @@ def on_message(client, userdata, msg):
     except Exception as e:
         print(f"Error parsing {msg.topic}: {e}")
 
-@st.cache_resource
-def start_mqtt():
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    thread = threading.Thread(target=client.loop_forever, daemon=True)
-    thread.start()
-    return client
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
 
-client_instance = start_mqtt()
+def mqtt_thread_function():
+    try:
+        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        client.loop_forever()
+    except Exception as e:
+        print("MQTT Connection Error:", e)
+
+threading.Thread(target=mqtt_thread_function, daemon=True).start()
 
 # === Streamlit App ===
 st.set_page_config(page_title="Fall Detection", layout="centered")
@@ -133,7 +136,7 @@ while True:
     d = latest_values.copy()
 
     with condition.container():
-        if fall_detected_flag:
+        if fall_detected_flag or onFall_flag:
             st.markdown(
                 f"""
                 <div style="
