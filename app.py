@@ -156,12 +156,34 @@ if st.session_state.mqtt is None:
 st.set_page_config(page_title="Fall Detection", layout="centered")
 st.title("Dashboard Monitoring Lansia")
 
+
+st.markdown("""
+        <style>
+        div.stButton > button {
+            background-color: transparent !important;
+            color: #1B3C53 !important;
+            border: 0px solid #5A0E24 !important;
+            border-radius: 15px 15px 15px 15px !important;
+            width: 100%;
+        }
+        div.stButton > button:hover {
+            color: #9E2A3A !important;
+            background-color: transparent !important;
+        }
+        div.stButton > button:active {
+            color: #9E2A3A !important;
+            background-color: transparent !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
 # -------------------------------------------------------------
 # CONTAINER SETUP
 # -------------------------------------------------------------
 status_placeholder = st.empty()
 connection_status_placeholder = st.empty()
 condition = st.empty()
+button_placeholder = st.empty()
 sensor_block = st.empty()
 permintaan_placeholder = st.empty()
 mpu_placeholder = st.empty()
@@ -187,69 +209,30 @@ with condition.container():
     print(st.session_state.on_fall)
 
     if gyro.get("Prediction") == 1 or st.session_state.on_fall:
-        # st.markdown(
-        #     f"""
-        #     <div style="
-        #         background-color: #FFCDC9;
-        #         color: #5A0E24;
-        #         border-radius: 10px;
-        #         padding: 20px;
-        #         margin-bottom: 50px;
-        #         display: flex;
-        #         flex-direction: column;
-        #         justify-content: center;
-        #         align-items: center;
-        #         text-align: center;
-        #     ">
-        #         <h5 style="margin: 0;">⚠️ <strong>Lansia Jatuh!</strong> Segera Periksa!</h5>
-        #     </div>
-        #     """,
-        #     unsafe_allow_html=True
-        # )
 
         print("Displaying fall alert")
 
-        st.markdown("""
-        <style>
-        /* Style the alert box wrapper */
-        .alert-box-container {
-            background-color: #FFCDC9;
-            border: 2px solid #5A0E24;
-            border-radius: 15px;
-            padding: 15px;
-            text-align: center;
-        }
-
-        /* Style the Streamlit button to merge visually */
-        .stButton>button {
-            color: #1B3C53 !important;
-            border: 0px solid #5A0E24 !important;
-            border-radius: 15px 15px 15px 15px !important;
-            width: 100%;
-        }
-
-        /* Hover effect */
-        .stButton>button:hover {
-            color: #9E2A3A !important;
-        }
-                    
-        .stButton>button:active {
-            color: #9E2A3A !important;
-            background-color: transparent !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        # Container
-        with st.container():
-            st.markdown("""
-            <div class="alert-box-container">
-                <h3 style="color: #5A0E24; margin: 0;">⚠️ Lansia Jatuh!</h3>
-                <p style="color: #5A0E24; margin: 5px 0;">Segera periksa lokasi!</p>
+        st.markdown(
+            f"""
+            <div style="
+                background-color: #FFCDC9;
+                color: #5A0E24;
+                border-radius: 10px;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+            ">
+                <h5 style="margin: 0;">⚠️ <strong>Lansia Jatuh!</strong> Segera periksa lokasi!</h5>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True
+        )
 
-            # Button visually attached
+        # Button visually attached
+        with button_placeholder:
             if st.button("Lansia Sudah Terbantu? Reset Status!"):
                 st.session_state.on_fall = False
                 st.rerun()
