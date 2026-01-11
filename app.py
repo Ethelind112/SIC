@@ -164,10 +164,6 @@ st.markdown("""
         color: #1B3C53 !important;
         border: 0px solid #5A0E24 !important;
         border-radius: 15px 15px 15px 15px !important;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
     }
     div.stButton > button:hover {
         color: #9E2A3A !important;
@@ -234,10 +230,8 @@ with condition.container():
             unsafe_allow_html=True
         )
         
-        colB1, colB2, colB3 = st.columns([1,2,1])
-
-        with colB2:
-            # Button visually attached
+        col1, col2, col3 = st.columns([1, 2, 1])  # Middle column is twice as wide
+        with col2:
             with button_placeholder:
                 if st.button("Lansia Sudah Terbantu? Reset Status!"):
                     st.session_state.on_fall = False
