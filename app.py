@@ -158,24 +158,27 @@ st.title("Dashboard Monitoring Lansia")
 
 
 st.markdown("""
-        <style>
-        div.stButton > button {
-            background-color: transparent !important;
-            color: #1B3C53 !important;
-            border: 0px solid #5A0E24 !important;
-            border-radius: 15px 15px 15px 15px !important;
-            width: 100%;
-        }
-        div.stButton > button:hover {
-            color: #9E2A3A !important;
-            background-color: transparent !important;
-        }
-        div.stButton > button:active {
-            color: #9E2A3A !important;
-            background-color: transparent !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+    <style>
+    div.stButton > button {
+        background-color: transparent !important;
+        color: #1B3C53 !important;
+        border: 0px solid #5A0E24 !important;
+        border-radius: 15px 15px 15px 15px !important;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    div.stButton > button:hover {
+        color: #9E2A3A !important;
+        background-color: transparent !important;
+    }
+    div.stButton > button:active {
+        color: #9E2A3A !important;
+        background-color: transparent !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # CONTAINER SETUP
