@@ -233,18 +233,15 @@ with condition.container():
             """,
             unsafe_allow_html=True
         )
-        colB1, colB2, colB3 = st.columns(3)
+        
+        colB1, colB2, colB3 = st.columns([1,2,1])
 
-        with colB1:
-            st.empty()
         with colB2:
             # Button visually attached
             with button_placeholder:
                 if st.button("Lansia Sudah Terbantu? Reset Status!"):
                     st.session_state.on_fall = False
                     st.rerun()
-        with colB3:
-            st.empty()
 
     elif gyro.get("Prediction") == 0:
         st.markdown(
