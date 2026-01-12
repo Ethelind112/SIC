@@ -33,7 +33,8 @@ MQTT_PORT = 1883
 MQTT_TOPIC_Ruangan = "devovation/ruangan"
 MQTT_TOPIC_Pergerakan = "devovation/pergerakan"
 MQTT_TOPIC_Permintaan = "devovation/permintaan"
-
+MQTT_TOPIC_BuzzerOn = "devovation/alert"
+MQTT_TOPIC_BuzzerOff = "devovation/reset"
 
 # -------------------------------------------------------------
 # SESSION STATE INIT (WAJIB — AGAR TIDAK ERROR)
@@ -111,6 +112,7 @@ def on_message(client, userdata, msg):
             print(f"Prediction: {prediction}, Probability: {proba}")
 
             if prediction == 1:
+                st.session_state.mqtt.publish(MQTT_TOPIC_BuzzerOn, "FALL")
                 st.session_state.on_fall = True
 
             row = {
@@ -239,6 +241,8 @@ with condition.container():
         with button_placeholder:
             if st.button("Lansia Sudah Terbantu? Reset Status!"):
                 st.session_state.on_fall = False
+                st.session_state.mqtt.publish(MQTT_TOPIC_BuzzerOff, "RESET")
+                st.session_state.last_data["gyro"]["Prediction"] = 0
                 st.rerun()
 
     elif gyro.get("Prediction") == 0:
