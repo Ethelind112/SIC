@@ -57,7 +57,7 @@ if "mqtt" not in st.session_state:
 if "last_data" not in st.session_state or st.session_state.last_data is None:
     st.session_state.last_data = {
         "temp_hum": {"Suhu": 0, "Hum": 0}, 
-        "gyro": {"Ax": 0, "Ay": 0, "Az": 0, "Gx": 0, "Gy": 0, "Gz": 0, "Prediction": 2},
+        "gyro": {"Ax": 0, "Ay": 0, "Az": 0, "Gx": 0, "Gy": 0, "Gz": 0},
         "request": {"Permintaan": "Tidak Ada", "Last_Update_Permintaan": "-"}
     }
 
@@ -101,28 +101,13 @@ def on_message(client, userdata, msg):
             Gy = float(data["Gy"])
             Gz = float(data["Gz"])
 
-            acc_magnitude = np.sqrt(Ax**2 + Ay**2 + Az**2)
-            gyro_magnitude = np.sqrt(Gx**2 + Gy**2 + Gz**2)
-
-            input_data = pd.DataFrame([[Ax, Ay, Az, Gx, Gy, Gz, acc_magnitude, gyro_magnitude]], columns=["ax", "ay", "az", "gx", "gy", "gz", "acc_magnitude", "gyro_magnitude"])
-
-            prediction = rf_model.predict(input_data)[0]
-            proba = rf_model.predict_proba(input_data)[0]
-
-            print(f"Prediction: {prediction}, Probability: {proba}")
-
-            if prediction == 1:
-                st.session_state.mqtt.publish(MQTT_TOPIC_BuzzerOn, "FALL")
-                st.session_state.on_fall = True
-
             row = {
                 "Ax": data.get("Ax"),
                 "Ay": data.get("Ay"),
                 "Az": data.get("Az"),
                 "Gx": data.get("Gx"),
                 "Gy": data.get("Gy"),
-                "Gz": data.get("Gz"),
-                "Prediction": prediction
+                "Gz": data.get("Gz")
             }
             st.session_state.last_data["gyro"] = row
             st.session_state.logs["gyro"].append(row)
@@ -212,9 +197,21 @@ else:
 with condition.container():
     gyro = st.session_state.last_data.get("gyro")
 
-    print(st.session_state.on_fall)
+    acc_magnitude = np.sqrt(gyro.get("Ax")**2 + gyro.get("Ay")**2 + gyro.get("Az")**2)
+    gyro_magnitude = np.sqrt(gyro.get("Gx")**2 + gyro.get("Gy")**2 + gyro.get("Gz")**2)
 
-    if gyro.get("Prediction") == 1 or st.session_state.on_fall:
+    input_data = pd.DataFrame([[gyro.get("Ax"), gyro.get("Ay"), gyro.get("Az"), gyro.get("Gx"), gyro.get("Gy"), gyro.get("Gz"), acc_magnitude, gyro_magnitude]], columns=["ax", "ay", "az", "gx", "gy", "gz", "acc_magnitude", "gyro_magnitude"])
+
+    prediction = rf_model.predict(input_data)[0]
+    proba = rf_model.predict_proba(input_data)[0]
+
+    print(f"Prediction: {prediction}, Probability: {proba}")
+
+    if prediction == 1:
+        st.session_state.mqtt.publish(MQTT_TOPIC_BuzzerOn, "FALL")
+        st.session_state.on_fall = True
+
+    if prediction == 1 or st.session_state.on_fall:
 
         print("Displaying fall alert")
 
