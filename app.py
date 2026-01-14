@@ -26,6 +26,118 @@ if rf_model is None:
     st.stop()
 
 # -------------------------------------------------------------
+# Fall Detection Calculation
+# -------------------------------------------------------------
+class FallDetection:
+    def __init__(self, amp_threshold_1=2, amp_threshold_2=12, angle_change_min=30, angle_change_max=400, trigger3_count_threshold=10, angle_change_threshold=10, trigger1_count_limit=6, trigger2_count_limit=6):
+        """
+        Initializes the FallDetection class with sensor offsets and thresholds.
+
+        Args:
+            amp_threshold_1 (float): Threshold for the amplitude in trigger 1.
+            amp_threshold_2 (float): Threshold for the amplitude in trigger 2.
+            angle_change_min (int): Minimum angle change for trigger 3.
+            angle_change_max (int): Maximum angle change for trigger 3.
+            trigger3_count_threshold (int): Threshold for trigger 3 count.
+            angle_change_threshold (int):  Angle change threshold for trigger 3.
+            trigger1_count_limit (int): Trigger 1 count limit.
+            trigger2_count_limit (int): Trigger 2 count limit.
+        """
+        self.ax = 0.0
+        self.ay = 0.0
+        self.az = 0.0
+        self.gx = 0.0
+        self.gy = 0.0
+        self.gz = 0.0
+        self.fall = False
+        self.trigger1 = False
+        self.trigger2 = False
+        self.trigger3 = False
+        self.trigger1count = 0
+        self.trigger2count = 0
+        self.trigger3count = 0
+        angleChange = 0
+        self.amp_threshold_1 = amp_threshold_1
+        self.amp_threshold_2 = amp_threshold_2
+        self.angle_change_min = angle_change_min
+        self.angle_change_max = angle_change_max
+        self.trigger3_count_threshold = trigger3_count_threshold
+        self.angle_change_threshold = angle_change_threshold
+        self.trigger1_count_limit = trigger1_count_limit
+        self.trigger2_count_limit = trigger2_count_limit
+
+
+    def process_sensor_data(self, ax, ay, az, gx, gy, gz):
+        """
+        Processes sensor data to detect potential falls.
+
+        Args:
+            ax (float): Accelerometer X-axis value.
+            ay (float): Accelerometer Y-axis value.
+            az (float): Accelerometer Z-axis value.
+            gx (float): Gyroscope X-axis value.
+            gy (float): Gyroscope Y-axis value.
+            gz (float): Gyroscope Z-axis value.
+
+        Returns:
+            bool: True if a fall is detected, False otherwise.
+        """
+        self.ax = ax
+        self.ay = ay
+        self.az = az
+        self.gx = gx
+        self.gy = gy
+        self.gz = gz
+
+        Raw_Amp = sqrt(self.ax * self.ax + self.ay * self.ay + self.az * self.az)
+        Amp = Raw_Amp * 10  # Assuming the same scaling as the Arduino code.
+
+        if Amp <= self.amp_threshold_1 and not self.trigger2:
+            self.trigger1 = True
+            print("TRIGGER 1 ACTIVATED")
+        if self.trigger1:
+            self.trigger1count += 1
+            if Amp >= self.amp_threshold_2:
+                self.trigger2 = True
+                print("TRIGGER 2 ACTIVATED")
+                self.trigger1 = False
+                self.trigger1count = 0
+        if self.trigger2:
+            self.trigger2count += 1
+            angleChange = sqrt(self.gx * self.gx + self.gy * self.gy + self.gz * self.gz)
+            print("AngleChange: " + (angleChange));
+            if self.angle_change_min <= angleChange <= self.angle_change_max:
+                self.trigger3 = True
+                self.trigger2 = False
+                self.trigger2count = 0
+                print("TRIGGER 3 ACTIVATED")
+        if self.trigger3:
+            self.trigger3count += 1
+            if self.trigger3count >= self.trigger3_count_threshold:
+                angleChange = sqrt(self.gx * self.gx + self.gy * self.gy + self.gz * self.gz)
+                if 0 <= angleChange <= self.angle_change_threshold:
+                    self.fall = True
+                    self.trigger3 = False
+                    self.trigger3count = 0
+                else:
+                    self.trigger3 = False
+                    self.trigger3count = 0
+                    print("TRIGGER 3 DEACTIVATED")
+
+        if self.trigger2count >= self.trigger2_count_limit:
+            self.trigger2 = False
+            self.trigger2count = 0
+            print("TRIGGER 2 DEACTIVATED")
+        if self.trigger1count >= self.trigger1_count_limit:
+            self.trigger1 = False
+            self.trigger1count = 0
+            print("TRIGGER 1 DEACTIVATED")
+
+        fall_detected = self.fall
+        self.fall = False  # Reset for the next iteration
+        return fall_detected
+
+# -------------------------------------------------------------
 # MANUAL MQTT SETTINGS (Laptop)
 # -------------------------------------------------------------
 MQTT_BROKER = "broker.emqx.io"
@@ -67,6 +179,8 @@ if "logs" not in st.session_state:
         "gyro": [],
         "request": [],
     }
+
+fall_detector = FallDetection()
 
 # -------------------------------------------------------------
 # MQTT CALLBACKS
@@ -196,23 +310,30 @@ else:
 
 with condition.container():
     gyro = st.session_state.last_data.get("gyro")
+    Ax = gyro.get("Ax")
+    Ay = gyro.get("Ay")
+    Az = gyro.get("Az")
+    Gx = gyro.get("Gx")
+    Gy = gyro.get("Gy")
+    Gz = gyro.get("Gz")
 
-    acc_magnitude = np.sqrt(gyro.get("Ax")**2 + gyro.get("Ay")**2 + gyro.get("Az")**2)
-    gyro_magnitude = np.sqrt(gyro.get("Gx")**2 + gyro.get("Gy")**2 + gyro.get("Gz")**2)
+    acc_magnitude = np.sqrt(Ax**2 + Ay**2 + Az**2)
+    gyro_magnitude = np.sqrt(Gx**2 + Gy**2 + Gz**2)
 
-    input_data = pd.DataFrame([[gyro.get("Ax"), gyro.get("Ay"), gyro.get("Az"), gyro.get("Gx"), gyro.get("Gy"), gyro.get("Gz"), acc_magnitude, gyro_magnitude]], columns=["ax", "ay", "az", "gx", "gy", "gz", "acc_magnitude", "gyro_magnitude"])
+    input_data = pd.DataFrame([[Ax, Ay, Az, Gx, Gy, Gz, acc_magnitude, gyro_magnitude]], columns=["ax", "ay", "az", "gx", "gy", "gz", "acc_magnitude", "gyro_magnitude"])
 
     prediction = rf_model.predict(input_data)[0]
     proba = rf_model.predict_proba(input_data)[0]
 
     print(f"Prediction: {prediction}, Probability: {proba}")
 
-    if prediction == 1:
+    fall_detected_flag = fall_detector.process_sensor_data(Ax, Ay, Az, Gx, Gy, Gz)
+
+    if prediction == 1 and fall_detected_flag:
         st.session_state.mqtt.publish(MQTT_TOPIC_BuzzerOn, "FALL")
         st.session_state.on_fall = True
 
-    if prediction == 1 or st.session_state.on_fall:
-
+    if (prediction == 1 and fall_detected_flag) or st.session_state.on_fall:
         print("Displaying fall alert")
 
         st.markdown(
@@ -242,7 +363,7 @@ with condition.container():
                 st.session_state.last_data["gyro"]["Prediction"] = 0
                 st.rerun()
 
-    elif gyro.get("Prediction") == 0:
+    elif prediction == 0 or not fall_detected_flag:
         st.markdown(
             f"""
             <div style="
