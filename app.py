@@ -29,34 +29,29 @@ if rf_model is None:
 # Fall Detection Calculation
 # -------------------------------------------------------------
 class FallDetection:
-    def __init__(self, amp_threshold_1=2, amp_threshold_2=12, angle_change_min=30, angle_change_max=400, trigger3_count_threshold=10, angle_change_threshold=10, trigger1_count_limit=6, trigger2_count_limit=6):
-        """
-        Initializes the FallDetection class with sensor offsets and thresholds.
+    def __init__(
+        self,
+        amp_threshold_1=3.0,        # ↑ sensitivity (was 2)
+        amp_threshold_2=9.0,        # ↓ impact threshold (was 12)
+        angle_change_min=15,        # ↓ (was 30)
+        angle_change_max=350,       # ↓ (was 400)
+        trigger3_count_threshold=5, # ↓ (was 10)
+        angle_change_threshold=5,   # ↓ (was 10)
+        trigger1_count_limit=4,     # ↓ (was 6)
+        trigger2_count_limit=4      # ↓ (was 6)
+    ):
+        self.ax = self.ay = self.az = 0.0
+        self.gx = self.gy = self.gz = 0.0
 
-        Args:
-            amp_threshold_1 (float): Threshold for the amplitude in trigger 1.
-            amp_threshold_2 (float): Threshold for the amplitude in trigger 2.
-            angle_change_min (int): Minimum angle change for trigger 3.
-            angle_change_max (int): Maximum angle change for trigger 3.
-            trigger3_count_threshold (int): Threshold for trigger 3 count.
-            angle_change_threshold (int):  Angle change threshold for trigger 3.
-            trigger1_count_limit (int): Trigger 1 count limit.
-            trigger2_count_limit (int): Trigger 2 count limit.
-        """
-        self.ax = 0.0
-        self.ay = 0.0
-        self.az = 0.0
-        self.gx = 0.0
-        self.gy = 0.0
-        self.gz = 0.0
         self.fall = False
         self.trigger1 = False
         self.trigger2 = False
         self.trigger3 = False
+
         self.trigger1count = 0
         self.trigger2count = 0
         self.trigger3count = 0
-        angleChange = 0
+
         self.amp_threshold_1 = amp_threshold_1
         self.amp_threshold_2 = amp_threshold_2
         self.angle_change_min = angle_change_min
@@ -66,75 +61,67 @@ class FallDetection:
         self.trigger1_count_limit = trigger1_count_limit
         self.trigger2_count_limit = trigger2_count_limit
 
-
     def process_sensor_data(self, ax, ay, az, gx, gy, gz):
-        """
-        Processes sensor data to detect potential falls.
+        self.ax, self.ay, self.az = ax, ay, az
+        self.gx, self.gy, self.gz = gx, gy, gz
 
-        Args:
-            ax (float): Accelerometer X-axis value.
-            ay (float): Accelerometer Y-axis value.
-            az (float): Accelerometer Z-axis value.
-            gx (float): Gyroscope X-axis value.
-            gy (float): Gyroscope Y-axis value.
-            gz (float): Gyroscope Z-axis value.
+        # Acceleration magnitude
+        raw_amp = sqrt(ax*ax + ay*ay + az*az)
+        amp = raw_amp * 10
 
-        Returns:
-            bool: True if a fall is detected, False otherwise.
-        """
-        self.ax = ax
-        self.ay = ay
-        self.az = az
-        self.gx = gx
-        self.gy = gy
-        self.gz = gz
+        # Angular velocity magnitude
+        angle_change = sqrt(gx*gx + gy*gy + gz*gz)
 
-        Raw_Amp = sqrt(self.ax * self.ax + self.ay * self.ay + self.az * self.az)
-        Amp = Raw_Amp * 10  # Assuming the same scaling as the Arduino code.
-
-        if Amp <= self.amp_threshold_1 and not self.trigger2:
+        # ---------------- TRIGGER 1 (Free fall) ----------------
+        if amp <= self.amp_threshold_1 and not self.trigger2:
             self.trigger1 = True
+            self.trigger1count = 0
             print("TRIGGER 1 ACTIVATED")
+
         if self.trigger1:
             self.trigger1count += 1
-            if Amp >= self.amp_threshold_2:
+            if amp >= self.amp_threshold_2:
                 self.trigger2 = True
-                print("TRIGGER 2 ACTIVATED")
                 self.trigger1 = False
                 self.trigger1count = 0
+                print("TRIGGER 2 ACTIVATED")
+
+        # ---------------- TRIGGER 2 (Impact + rotation) ----------------
         if self.trigger2:
             self.trigger2count += 1
-            angleChange = sqrt(self.gx * self.gx + self.gy * self.gy + self.gz * self.gz)
-            print("AngleChange: " + (angleChange));
-            if self.angle_change_min <= angleChange <= self.angle_change_max:
+            print(f"AngleChange: {angle_change:.2f}")
+
+            if self.angle_change_min <= angle_change <= self.angle_change_max:
                 self.trigger3 = True
                 self.trigger2 = False
                 self.trigger2count = 0
                 print("TRIGGER 3 ACTIVATED")
+
+        # ---------------- TRIGGER 3 (Post-fall inactivity) ----------------
         if self.trigger3:
             self.trigger3count += 1
-            if self.trigger3count >= self.trigger3_count_threshold:
-                angleChange = sqrt(self.gx * self.gx + self.gy * self.gy + self.gz * self.gz)
-                if 0 <= angleChange <= self.angle_change_threshold:
-                    self.fall = True
-                    self.trigger3 = False
-                    self.trigger3count = 0
-                else:
-                    self.trigger3 = False
-                    self.trigger3count = 0
-                    print("TRIGGER 3 DEACTIVATED")
 
+            if self.trigger3count >= self.trigger3_count_threshold:
+                if angle_change <= self.angle_change_threshold:
+                    self.fall = True
+                    print("FALL DETECTED")
+
+                self.trigger3 = False
+                self.trigger3count = 0
+
+        # ---------------- TIMEOUTS ----------------
         if self.trigger2count >= self.trigger2_count_limit:
             self.trigger2 = False
             self.trigger2count = 0
             print("TRIGGER 2 DEACTIVATED")
+
         if self.trigger1count >= self.trigger1_count_limit:
             self.trigger1 = False
             self.trigger1count = 0
             print("TRIGGER 1 DEACTIVATED")
 
         fall_detected = self.fall
-        self.fall = False  # Reset for the next iteration
+        self.fall = False
         return fall_detected
 
 # -------------------------------------------------------------
