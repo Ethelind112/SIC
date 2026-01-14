@@ -329,6 +329,8 @@ with condition.container():
 
     fall_detected_flag = fall_detector.process_sensor_data(Ax, Ay, Az, Gx, Gy, Gz)
 
+    print("Fall Detected Flag:", fall_detected_flag)
+
     if prediction == 1 and fall_detected_flag:
         st.session_state.mqtt.publish(MQTT_TOPIC_BuzzerOn, "FALL")
         st.session_state.on_fall = True
