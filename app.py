@@ -26,105 +26,6 @@ if rf_model is None:
     st.stop()
 
 # -------------------------------------------------------------
-# Fall Detection Calculation
-# -------------------------------------------------------------
-class FallDetection:
-    def __init__(
-        self,
-        amp_threshold_1=3.0,        # ↑ sensitivity (was 2)
-        amp_threshold_2=9.0,        # ↓ impact threshold (was 12)
-        angle_change_min=15,        # ↓ (was 30)
-        angle_change_max=350,       # ↓ (was 400)
-        trigger3_count_threshold=5, # ↓ (was 10)
-        angle_change_threshold=5,   # ↓ (was 10)
-        trigger1_count_limit=4,     # ↓ (was 6)
-        trigger2_count_limit=4      # ↓ (was 6)
-    ):
-        self.ax = self.ay = self.az = 0.0
-        self.gx = self.gy = self.gz = 0.0
-
-        self.fall = False
-        self.trigger1 = False
-        self.trigger2 = False
-        self.trigger3 = False
-
-        self.trigger1count = 0
-        self.trigger2count = 0
-        self.trigger3count = 0
-
-        self.amp_threshold_1 = amp_threshold_1
-        self.amp_threshold_2 = amp_threshold_2
-        self.angle_change_min = angle_change_min
-        self.angle_change_max = angle_change_max
-        self.trigger3_count_threshold = trigger3_count_threshold
-        self.angle_change_threshold = angle_change_threshold
-        self.trigger1_count_limit = trigger1_count_limit
-        self.trigger2_count_limit = trigger2_count_limit
-
-    def process_sensor_data(self, ax, ay, az, gx, gy, gz):
-        self.ax, self.ay, self.az = ax, ay, az
-        self.gx, self.gy, self.gz = gx, gy, gz
-
-        # Acceleration magnitude
-        raw_amp = sqrt(ax*ax + ay*ay + az*az)
-        amp = raw_amp * 10
-
-        # Angular velocity magnitude
-        angle_change = sqrt(gx*gx + gy*gy + gz*gz)
-
-        # ---------------- TRIGGER 1 (Free fall) ----------------
-        if amp <= self.amp_threshold_1 and not self.trigger2:
-            self.trigger1 = True
-            self.trigger1count = 0
-            print("TRIGGER 1 ACTIVATED")
-
-        if self.trigger1:
-            self.trigger1count += 1
-            if amp >= self.amp_threshold_2:
-                self.trigger2 = True
-                self.trigger1 = False
-                self.trigger1count = 0
-                print("TRIGGER 2 ACTIVATED")
-
-        # ---------------- TRIGGER 2 (Impact + rotation) ----------------
-        if self.trigger2:
-            self.trigger2count += 1
-            print(f"AngleChange: {angle_change:.2f}")
-
-            if self.angle_change_min <= angle_change <= self.angle_change_max:
-                self.trigger3 = True
-                self.trigger2 = False
-                self.trigger2count = 0
-                print("TRIGGER 3 ACTIVATED")
-
-        # ---------------- TRIGGER 3 (Post-fall inactivity) ----------------
-        if self.trigger3:
-            self.trigger3count += 1
-
-            if self.trigger3count >= self.trigger3_count_threshold:
-                if angle_change <= self.angle_change_threshold:
-                    self.fall = True
-                    print("FALL DETECTED")
-
-                self.trigger3 = False
-                self.trigger3count = 0
-
-        # ---------------- TIMEOUTS ----------------
-        if self.trigger2count >= self.trigger2_count_limit:
-            self.trigger2 = False
-            self.trigger2count = 0
-            print("TRIGGER 2 DEACTIVATED")
-
-        if self.trigger1count >= self.trigger1_count_limit:
-            self.trigger1 = False
-            self.trigger1count = 0
-            print("TRIGGER 1 DEACTIVATED")
-
-        fall_detected = self.fall
-        self.fall = False
-        return fall_detected
-
-# -------------------------------------------------------------
 # MANUAL MQTT SETTINGS (Laptop)
 # -------------------------------------------------------------
 MQTT_BROKER = "broker.emqx.io"
@@ -166,8 +67,6 @@ if "logs" not in st.session_state:
         "gyro": [],
         "request": [],
     }
-
-fall_detector = FallDetection()
 
 # -------------------------------------------------------------
 # MQTT CALLBACKS
@@ -314,15 +213,13 @@ with condition.container():
 
     print(f"Prediction: {prediction}, Probability: {proba}")
 
-    fall_detected_flag = fall_detector.process_sensor_data(Ax, Ay, Az, Gx, Gy, Gz)
+    print("Fall Detected Flag:")
 
-    print("Fall Detected Flag:", fall_detected_flag)
-
-    if prediction == 1 and fall_detected_flag:
+    if prediction == 1:
         st.session_state.mqtt.publish(MQTT_TOPIC_BuzzerOn, "FALL")
         st.session_state.on_fall = True
 
-    if (prediction == 1 and fall_detected_flag) or st.session_state.on_fall:
+    if prediction == 1 or st.session_state.on_fall:
         print("Displaying fall alert")
 
         st.markdown(
@@ -352,7 +249,7 @@ with condition.container():
                 st.session_state.last_data["gyro"]["Prediction"] = 0
                 st.rerun()
 
-    elif prediction == 0 or not fall_detected_flag:
+    elif prediction == 0:
         st.markdown(
             f"""
             <div style="
