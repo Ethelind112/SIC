@@ -419,5 +419,5 @@ with chart_placeholder.container():
 st.session_state.mqtt.loop(timeout=0.1)
 
 # auto refresh
-time.sleep(1)
+time.sleep(0.5)
 st.rerun()
